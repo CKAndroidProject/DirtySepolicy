@@ -11,8 +11,11 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.FileDescriptor;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 
@@ -80,8 +83,34 @@ public final class AppZygote implements ZygotePreload {
         if (SELinux.checkSELinuxAccess("u:r:zygote:s0", "u:object_r:adb_data_file:s0", "dir", "search")) {
             sb.append("found ZygiskNext; ");
         }
+
+        var buffer = readStatus();
+        int version = buffer.getInt(0);
+        if (version != 1) {
+            return "ERROR: unknown status version: " + version;
+        }
+        int sequence = buffer.getInt(4);
+        if (sequence > 4) {
+            sb.append("status sequence=" + sequence + "; ");
+        }
+        int enforcing = buffer.getInt(8);
+        if (enforcing != 1) {
+            sb.append("SELinux is permissive; ");
+        }
+        int policyload = buffer.getInt(12);
+        if (policyload > 1) {
+            sb.append("policyload=" + policyload + "; ");
+        }
+        int deny_unknown = buffer.getInt(16);
+        if (deny_unknown != 1) {
+            sb.append("deny_unknown=" + deny_unknown + "; ");
+        }
+        if ((policyload == 0 && sequence != 0) || (policyload == 1 && sequence != 4)) {
+            sb.append("enforce changed; ");
+        }
         if (sb.length() == 0) {
-            return "OK: no dirty sepolicy found";
+            return "OK: no dirty sepolicy found\n" +
+                    "INFO: sequence=" + sequence + " policyload=" + policyload;
         } else {
             return "WARNING: " + sb;
         }
@@ -155,6 +184,19 @@ public final class AppZygote implements ZygotePreload {
             throw new RuntimeException("setcon errno=" + e.errno, e);
         } catch (IOException e) {
             throw new RuntimeException("setcon: " + e.getMessage(), e);
+        }
+    }
+
+    private static ByteBuffer readStatus() {
+        try (var status = new FileInputStream("/sys/fs/selinux/status")) {
+            var buffer = ByteBuffer.allocate(20);
+            buffer.order(ByteOrder.nativeOrder());
+            Os.pread(status.getFD(), buffer, 0);
+            return buffer;
+        } catch (ErrnoException e) {
+            throw new RuntimeException("read_sequence errno=" + e.errno, e);
+        } catch (IOException e) {
+            throw new RuntimeException("read_sequence: " + e.getMessage(), e);
         }
     }
 }
