@@ -5,10 +5,12 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
+import android.view.WindowInsets;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -42,16 +44,33 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         getActionBar().setSubtitle(BuildConfig.VERSION_NAME);
         var layout = new RelativeLayout(this);
+        if (Build.VERSION.SDK_INT >= 35) {
+            layout.setOnApplyWindowInsetsListener((v, insets) -> {
+                var systemBars = insets.getInsets(WindowInsets.Type.systemBars());
+                v.setPadding(0, systemBars.top, 0, 0);
+                return insets;
+            });
+        }
+        var info = new TextView(this);
+        info.setTextIsSelectable(true);
+        info.setTextSize(20);
+        var s = Build.FINGERPRINT + "\n" + System.getProperty("os.version");
+        info.setText(s);
+        var params = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT);
+        params.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+        params.addRule(RelativeLayout.CENTER_HORIZONTAL);
+        layout.addView(info, params);
         textView = new TextView(this);
         textView.setTextIsSelectable(true);
         textView.setTextSize(20);
         var def = "INFO: Wiaiting for service...";
         textView.setText(def);
-        var params = new RelativeLayout.LayoutParams(
+        params = new RelativeLayout.LayoutParams(
                 RelativeLayout.LayoutParams.WRAP_CONTENT,
                 RelativeLayout.LayoutParams.WRAP_CONTENT);
-        params.addRule(RelativeLayout.CENTER_HORIZONTAL);
-        params.addRule(RelativeLayout.CENTER_VERTICAL);
+        params.addRule(RelativeLayout.CENTER_IN_PARENT);
         layout.addView(textView, params);
         setContentView(layout);
         try {
