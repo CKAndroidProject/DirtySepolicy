@@ -90,23 +90,17 @@ public final class AppZygote implements ZygotePreload {
             return "ERROR: unknown status version: " + version;
         }
         int sequence = buffer.getInt(4);
-        if (sequence > 4) {
-            sb.append("status sequence=" + sequence + "; ");
-        }
         int enforcing = buffer.getInt(8);
         if (enforcing != 1) {
             sb.append("SELinux is permissive; ");
         }
         int policyload = buffer.getInt(12);
-        if (policyload > 1) {
-            sb.append("policyload=" + policyload + "; ");
-        }
         int deny_unknown = buffer.getInt(16);
         if (deny_unknown != 1) {
-            sb.append("deny_unknown=" + deny_unknown + "; ");
+            sb.append("deny_unknown=").append(deny_unknown).append("; ");
         }
-        if ((policyload == 0 && sequence != 0) || (policyload == 1 && sequence != 4)) {
-            sb.append("enforce changed; ");
+        if ((policyload == 0 && sequence != 0) || (policyload == 1 && sequence != 4) || policyload > 1) {
+            sb.append("sequence=").append(sequence).append(" policyload=").append(policyload).append("; ");
         }
         if (sb.length() == 0) {
             return "OK: no dirty sepolicy found\n" +
