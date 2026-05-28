@@ -99,12 +99,14 @@ public final class AppZygote implements ZygotePreload {
         if (deny_unknown != 1) {
             sb.append("deny_unknown=").append(deny_unknown).append("; ");
         }
-        if ((policyload == 0 && sequence != 0) || (policyload == 1 && sequence != 4) || policyload > 1) {
-            sb.append("sequence=").append(sequence).append(" policyload=").append(policyload).append("; ");
+        var avdSeqNo = readAvdSeqNo();
+        if ((policyload == 0 && sequence != 0) || (policyload == 1 && sequence != 4) || policyload > 1 || avdSeqNo != 1) {
+            sb.append("sequence=").append(sequence).append(" policyload=").append(policyload);
+            sb.append(" avdSeqNo=").append(avdSeqNo).append("; ");
         }
         if (sb.length() == 0) {
             return "OK: no dirty sepolicy found\n" +
-                    "INFO: sequence=" + sequence + " policyload=" + policyload;
+                    "INFO: sequence=" + sequence + " policyload=" + policyload + " avdSeqNo=" + avdSeqNo;
         } else {
             return "WARNING: " + sb;
         }
@@ -191,6 +193,30 @@ public final class AppZygote implements ZygotePreload {
             throw new RuntimeException("read_sequence errno=" + e.errno, e);
         } catch (IOException e) {
             throw new RuntimeException("read_sequence: " + e.getMessage(), e);
+        }
+    }
+
+    private static int readAvdSeqNo() {
+        FileDescriptor fd = null;
+        try {
+            fd = Os.open("/sys/fs/selinux/access", OsConstants.O_RDWR | OsConstants.O_CLOEXEC, 0);
+            var bytes = "u:r:untrusted_app:s0 u:r:untrusted_app:s0 0".getBytes();
+            Os.write(fd, ByteBuffer.wrap(bytes));
+            // %x %x %x %x %u %x = (2+8)*5 + 10 + 5 = 65 ~= 128
+            var result = ByteBuffer.allocate(128);
+            var ret = Os.read(fd, result);
+            var str = new String(result.array(), 0, ret);
+            return Integer.parseInt(str.split(" ")[4]);
+        } catch (Throwable t) {
+            Log.e(TAG, "readAvdSeqNo err", t);
+            return -1;
+        } finally {
+            if (fd != null) {
+                try {
+                    Os.close(fd);
+                } catch (ErrnoException ignored) {
+                }
+            }
         }
     }
 }
