@@ -6,8 +6,8 @@ android {
     enableKotlin = false
     namespace = "org.lsposed.dirtysepolicy"
     defaultConfig {
-        versionCode = 4
-        versionName = "2.1"
+        versionCode = 5
+        versionName = "2.2"
     }
     buildTypes {
         release {
