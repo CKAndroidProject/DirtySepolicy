@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.system.Os;
 import android.util.Log;
 import android.view.WindowInsets;
 import android.widget.RelativeLayout;
@@ -54,7 +55,7 @@ public class MainActivity extends Activity {
         var info = new TextView(this);
         info.setTextIsSelectable(true);
         info.setTextSize(20);
-        var s = Build.FINGERPRINT + "\n" + System.getProperty("os.version");
+        var s = Build.FINGERPRINT + "\n" + Os.uname().release;
         info.setText(s);
         var params = new RelativeLayout.LayoutParams(
                 RelativeLayout.LayoutParams.WRAP_CONTENT,

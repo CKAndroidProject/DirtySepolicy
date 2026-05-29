@@ -11,6 +11,25 @@ public final class AppZygote implements ZygotePreload {
     private final static String TAG = "DirtySepolicy";
     static String result = "ERROR: app zygote not called";
 
+    private static int parseVersion(String release, int start) {
+        int end = start;
+        while (end < release.length()) {
+            var c = release.charAt(end);
+            if (c < '0' || c > '9') break;
+            end++;
+        }
+        return Integer.parseInt(release.substring(start, end));
+    }
+
+    private static boolean isNewKernel() {
+        var release = Os.uname().release;
+        int major = parseVersion(release, 0);
+        int dot = release.indexOf('.');
+        int minor = parseVersion(release, dot + 1);
+        // https://github.com/torvalds/linux/commit/fc983171e4c8
+        return major > 6 || (major == 6 && minor >= 10);
+    }
+
     private String doCheck() {
         if (!SELinux.isSELinuxEnabled()) {
             return "ERROR: SELinux is disabled";
@@ -82,7 +101,7 @@ public final class AppZygote implements ZygotePreload {
         if (deny_unknown != 1) {
             sb.append("deny_unknown=").append(deny_unknown).append("; ");
         }
-        if ((policyload == 0 && sequence != 0) || (policyload == 1 && sequence != 4) || policyload > 1) {
+        if (!(isNewKernel() ? policyload == 1 && sequence == 4 : policyload == 0 && sequence == 0)) {
             sb.append("sequence=").append(sequence).append(" policyload=").append(policyload).append("; ");
         }
         try {
