@@ -65,7 +65,7 @@ public class SELinux {
         var pair = readIndex(tclass, perm);
         try {
             var parts = access(scon, tcon, pair.first);
-            var allowd = Integer.parseInt(parts[0], 16);
+            var allowd = Integer.parseUnsignedInt(parts[0], 16);
             return (allowd & pair.second) == pair.second;
         } catch (ErrnoException e) {
             if (e.errno == OsConstants.EINVAL) {
@@ -90,7 +90,7 @@ public class SELinux {
         }
 
         try {
-            access("u:r:app_zygote:s0", context, 0);
+            access(context, context, 0);
             return true;
         } catch (ErrnoException e) {
             if (e.errno != OsConstants.EINVAL) {

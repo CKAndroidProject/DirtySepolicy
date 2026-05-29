@@ -47,28 +47,23 @@ public final class AppZygote implements ZygotePreload {
         if (Build.TYPE.equals("user") && SELinux.checkSELinuxAccess("u:r:shell:s0", "u:r:su:s0", "process", "transition")) {
             sb.append("found AOSP su in user build; ");
         }
-        if (SELinux.contextExists("u:r:adbroot:s0")
-                || SELinux.checkSELinuxAccess("u:r:adbd:s0", "u:r:adbroot:s0", "binder", "call")) {
+        if (SELinux.contextExists("u:r:adbroot:s0")) {
             sb.append("found adb_root; ");
         }
         if (SELinux.contextExists("u:r:magisk:s0") || SELinux.contextExists("u:object_r:magisk_file:s0")
-                || SELinux.checkSELinuxAccess("u:r:untrusted_app:s0", "u:object_r:magisk_file:s0", "file", "read")
                 || SELinux.checkSELinuxAccess("u:object_r:rootfs:s0", "u:object_r:tmpfs:s0", "filesystem", "associate")
                 || SELinux.checkSELinuxAccess("u:r:kernel:s0", "u:object_r:tmpfs:s0", "fifo_file", "open")) {
             sb.append("found Magisk; ");
         }
         if (SELinux.contextExists("u:r:ksu:s0") || SELinux.contextExists("u:object_r:ksu_file:s0")
-                || SELinux.checkSELinuxAccess("u:r:kernel:s0", "u:object_r:adb_data_file:s0", "file", "read")
-                || SELinux.checkSELinuxAccess("u:r:untrusted_app:s0", "u:object_r:ksu_file:s0", "file", "read")) {
+                || SELinux.checkSELinuxAccess("u:r:kernel:s0", "u:object_r:adb_data_file:s0", "file", "read")) {
             sb.append("found KernelSU; ");
         }
         if (SELinux.contextExists("u:object_r:lsposed_file:s0")
-                || SELinux.checkSELinuxAccess("u:r:untrusted_app:s0", "u:object_r:lsposed_file:s0", "file", "read")
                 || SELinux.checkSELinuxAccess("u:r:system_server:s0", "u:object_r:apk_data_file:s0", "file", "execute")) {
             sb.append("found LSPosed; ");
         }
         if (SELinux.contextExists("u:object_r:xposed_data:s0") || SELinux.contextExists("u:object_r:xposed_file:s0")
-                || SELinux.checkSELinuxAccess("u:r:untrusted_app:s0", "u:object_r:xposed_data:s0", "file", "read")
                 || SELinux.checkSELinuxAccess("u:r:dex2oat:s0", "u:object_r:dex2oat_exec:s0", "file", "execute_no_trans")) {
             sb.append("found Xposed; ");
         }
@@ -96,7 +91,7 @@ public final class AppZygote implements ZygotePreload {
         }
         try {
             var avd = SELinux.access("u:r:untrusted_app:s0", "u:r:untrusted_app:s0", 0);
-            var avdSeqNo = Integer.parseInt(avd[4]);
+            var avdSeqNo = Integer.parseUnsignedInt(avd[4]);
             if (avdSeqNo != 1) {
                 sb.append("avdSeqNo=").append(avdSeqNo).append("; ");
             }

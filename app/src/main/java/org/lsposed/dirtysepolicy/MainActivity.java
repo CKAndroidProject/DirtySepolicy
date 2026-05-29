@@ -65,7 +65,7 @@ public class MainActivity extends Activity {
         textView = new TextView(this);
         textView.setTextIsSelectable(true);
         textView.setTextSize(20);
-        var def = "INFO: Wiaiting for service...";
+        var def = "INFO: Waiting for service...";
         textView.setText(def);
         params = new RelativeLayout.LayoutParams(
                 RelativeLayout.LayoutParams.WRAP_CONTENT,
