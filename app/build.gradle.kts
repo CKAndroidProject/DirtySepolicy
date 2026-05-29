@@ -45,7 +45,3 @@ android {
         includeInApk = false
     }
 }
-
-dependencies {
-    compileOnly(projects.stub)
-}

@@ -13,15 +13,17 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
 public class SELinux {
+    private static final Path SELINUX_FS = Paths.get("/sys/fs/selinux");
     private static final Map<String, Pair<Integer, Integer>> permCache = new HashMap<>();
 
     public static Pair<Integer, Integer> readIndex(String className, String permName) {
-        var classDir = Paths.get("/sys/fs/selinux/class");
+        var classDir = SELINUX_FS.resolve("class");
         var key = className + ":" + permName;
         var value = permCache.get(key);
         if (value != null) {
@@ -43,7 +45,7 @@ public class SELinux {
     }
 
     public static String[] access(String scon, String tcon, int tclass) throws ErrnoException {
-        try (var access = new RandomAccessFile("/sys/fs/selinux/access", "rw")) {
+        try (var access = new RandomAccessFile(SELINUX_FS.resolve("access").toFile(), "rw")) {
             var query = scon + " " + tcon + " " + tclass;
             var data = query.getBytes(StandardCharsets.UTF_8);
             Os.write(access.getFD(), data, 0, data.length);
@@ -78,7 +80,7 @@ public class SELinux {
     public static boolean contextExists(String context) {
         var data = context.getBytes(StandardCharsets.UTF_8);
 
-        try (var file = new FileOutputStream("/sys/fs/selinux/context")) {
+        try (var file = new FileOutputStream(SELINUX_FS.resolve("context").toFile())) {
             Os.write(file.getFD(), data, 0, data.length);
             return true;
         } catch (ErrnoException e) {
@@ -115,7 +117,7 @@ public class SELinux {
     }
 
     public static ByteBuffer readStatus() {
-        try (var status = new FileInputStream("/sys/fs/selinux/status")) {
+        try (var status = new FileInputStream(SELINUX_FS.resolve("status").toFile())) {
             var buffer = ByteBuffer.allocate(20);
             buffer.order(ByteOrder.nativeOrder());
             Os.read(status.getFD(), buffer);
@@ -128,22 +130,42 @@ public class SELinux {
     }
 
     public static boolean isSELinuxEnabled() {
-        return android.os.SELinux.isSELinuxEnabled();
+        return Files.isDirectory(SELINUX_FS);
     }
 
     public static boolean isSELinuxEnforced() {
-        return android.os.SELinux.isSELinuxEnforced();
+        var enforce = SELINUX_FS.resolve("enforce");
+        try {
+            var str = new String(Files.readAllBytes(enforce));
+            return Integer.parseInt(str) == 1;
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     public static String getFileContext(String path) {
-        return android.os.SELinux.getFileContext(path);
+        try {
+            return new String(Os.getxattr(path, "security.selinux"));
+        } catch (ErrnoException e) {
+            return null;
+        }
     }
 
     public static String getContext() {
-        return android.os.SELinux.getContext();
+        var path = Paths.get("/proc/self/task/" + Os.gettid() + "/attr/current");
+        try {
+            return new String(Files.readAllBytes(path));
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     public static String getPidContext(int pid) {
-        return android.os.SELinux.getPidContext(pid);
+        var path = Paths.get("/proc/" + pid + "/attr/current");
+        try {
+            return new String(Files.readAllBytes(path));
+        } catch (IOException e) {
+            return null;
+        }
     }
 }

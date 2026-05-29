@@ -7,10 +7,6 @@ import android.system.ErrnoException;
 import android.system.Os;
 import android.util.Log;
 
-import java.io.File;
-import java.io.FileDescriptor;
-import java.util.HashSet;
-
 public final class AppZygote implements ZygotePreload {
     private final static String TAG = "DirtySepolicy";
     static String result = "ERROR: app zygote not called";
@@ -114,32 +110,11 @@ public final class AppZygote implements ZygotePreload {
             return;
         }
 
-        var fileSet = new HashSet<String>();
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
-            var fds = new File("/proc/self/fd").listFiles(File::exists);
-            for (var fd : fds) {
-                fileSet.add(fd.getName());
-            }
-        }
-
         try {
             result = doCheck();
         } catch (RuntimeException e) {
             result = "ERROR: " + e.getMessage();
             Log.e(TAG, Log.getStackTraceString(e));
-        } finally {
-            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.R) {
-                var fds = new File("/proc/self/fd").listFiles(File::exists);
-                for (var fd : fds) {
-                    if (fileSet.add(fd.getName())) {
-                        try {
-                            Os.dup2(FileDescriptor.in, Integer.parseInt(fd.getName()));
-                        } catch (ErrnoException e) {
-                            Log.e(TAG, "Close selinux netlink socket", e);
-                        }
-                    }
-                }
-            }
         }
     }
 }
